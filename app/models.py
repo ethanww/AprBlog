@@ -1,4 +1,4 @@
-from app import db
+from . import db
 from flask import Markup
 '''导入支持markdown文本内容的相关库'''
 from markdown import markdown
@@ -6,6 +6,10 @@ from markdown.extensions.codehilite import CodeHiliteExtension
 from markdown.extensions.extra import ExtraExtension
 from micawber import bootstrap_basic, parse_html
 from micawber.cache import Cache as OEmbedCache
+from datetime import datetime
+from . import admin
+from flask_admin.contrib.mongoengine import ModelView
+from flask_wtf import Form
 
 oembed_providers = bootstrap_basic(OEmbedCache())
 
@@ -40,3 +44,13 @@ class Post(db.Document):
 
     def __unicode__(self):
         return self.title
+
+'''后台管理'''
+class PostAdmin(ModelView):
+    form_base_class = Form
+    column_display_pk = True
+    can_create = False
+    column_list = ('title','timestamp','published')
+
+
+admin.add_view(PostAdmin(Post))

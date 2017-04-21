@@ -1,46 +1,12 @@
-from flask import Flask,render_template,url_for,session,redirect,request,flash,abort,Markup
+from flask import render_template,url_for,session,redirect,request,flash,abort
 from werkzeug.security import check_password_hash
-from flask_moment import Moment
-from flask_mongoengine import MongoEngine
-from flask_admin import Admin
-from flask_admin.contrib.mongoengine import ModelView
-from flask_wtf import Form
-import os
 import hashlib
 import functools
-from datetime import datetime
-'''导入支持markdown文本内容的相关库'''
-from markdown import markdown
-from markdown.extensions.codehilite import CodeHiliteExtension
-from markdown.extensions.extra import ExtraExtension
-from micawber import bootstrap_basic, parse_html
-from micawber.cache import Cache as OEmbedCache
+from manage import app
+from app.models import Post
+from . import main
 
 
-basedir=os.path.abspath(os.path.dirname(__file__))
-
-'''配置和注册'''
-app = Flask(__name__)
-app.config['MONGODB_SETTINGS'] = {
-    'db': 'AprBlog',
-    'host': '127.0.0.1',
-    'port': 27017
-}
-app.secret_key='it is my first blog'
-app.debug=True
-db=MongoEngine(app)
-moment=Moment(app)
-admin=Admin(app,name='后台管理')
-oembed_providers = bootstrap_basic(OEmbedCache())
-
-'''错误界面'''
-@app.errorhandler(404)
-def page_not_found(e):
-    return render_template('404.html'), 404
-
-@app.errorhandler(500)
-def internal_server_error(e):
-    return render_template('500.html'), 500
 
 '''登录验证'''
 def login_required(fn):
@@ -52,7 +18,8 @@ def login_required(fn):
     return inner
 
 '''登录视图函数'''
-@app.route('/login',methods=['POST','GET'])
+# @app.route('/login',methods=['POST','GET'])
+@main.route('/login',methods=['POST','GET'])
 def login():
     next_url=request.args.get('next') or request.form.get('next')
     pass_hash='pbkdf2:sha1:1000$80Oc5MyH$74a5c46815e27f6282b744c6590b012cf9f23b56'
@@ -67,7 +34,8 @@ def login():
     return render_template('login.html', next=next_url)
 
 '''登出视图函数'''
-@app.route('/logout',methods=['GET','POST'])
+# @app.route('/logout',methods=['GET','POST'])
+@main.route('/logout',methods=['GET','POST'])
 @login_required
 def logout():
     if request.method=='POST':
@@ -78,16 +46,20 @@ def logout():
     return render_template('logout.html')
 
 '''首页视图函数'''
-@app.route('/')
+# @app.route('/')
+@main.route('/')
 def index():
     page=request.args.get('page',1,type=int)
     pagination=Post.objects(published=True).order_by('-timestamp').paginate(page=page,per_page=10)
     posts=pagination.items
     return render_template('index.html', posts=posts, pagination=pagination, is_draft=False)
-
+# @app.route('/')
+# def index():
+#     return 'hello'
 
 '''草稿箱视图函数'''
-@app.route('/draft')
+# @app.route('/draft')
+@main.route('/draft')
 @login_required
 def draft():
     page=request.args.get('page',1,type=int)
@@ -96,7 +68,8 @@ def draft():
     return render_template('index.html', posts=posts, pagination=pagination, is_draft=True)
 
 '''博文创建视图'''
-@app.route('/create',methods=['GET','POST'])
+# @app.route('/create',methods=['GET','POST'])
+@main.route('/create',methods=['GET','POST'])
 @login_required
 def create():
     if request.method=='POST':
@@ -116,7 +89,8 @@ def create():
     return render_template('create.html')
 
 '''博文详细内容视图'''
-@app.route('/detail')
+# @app.route('/detail')
+@main.route('/detail')
 def detail():
     if not request.args.get('post_id'):
         abort(404)
@@ -126,7 +100,8 @@ def detail():
     return render_template('detail.html', post=post)
 
 '''博文编辑'''
-@app.route('/edit',methods=['GET','POST'])
+# @app.route('/edit',methods=['GET','POST'])
+@main.route('/edit',methods=['GET','POST'])
 @login_required
 def edit():
     if not request.args.get('post_id'):
@@ -177,51 +152,4 @@ def generate_csrf_token():
     return session['_csrf_token']
 app.jinja_env.globals['csrf_token']=generate_csrf_token
 
-
-'''数据库模型，采用MongoDB'''
-class Post(db.Document):
-    title=db.StringField(max_length=80,required=True)
-    content=db.StringField()
-    timestamp=db.DateTimeField(default=datetime.utcnow)
-    published=db.BooleanField(default=False)
-    # category_id=db.
-    # category=db.ReferenceField('Category')
-    # category=db.ListField(db.ReferenceField('Category'))
-    meta={
-        'allow_inheritance': True,
-        'ordering':['-timestamp']
-    }
-
-    @property
-    def html_content(self):
-        hilite=CodeHiliteExtension(linenums=False,css_class='highlight')
-        extras=ExtraExtension()
-        markdowm_content=markdown(self.content,extensions=[hilite,extras])
-        oembed_content=parse_html(
-            markdowm_content,
-            oembed_providers,
-            urlize_all=True,
-            maxwidth=800)
-        return Markup(oembed_content)
-
-    def __repr__(self):
-        return '<Post %r>' %self.title
-
-    def __unicode__(self):
-        return self.title
-
-
-'''后台管理'''
-class PostAdmin(ModelView):
-    form_base_class = Form
-    column_display_pk = True
-    can_create = False
-    column_list = ('title','timestamp','published')
-
-
-admin.add_view(PostAdmin(Post))
-
-
-if __name__ == '__main__':
-    app.run(host='127.0.0.1',port=5001)
 

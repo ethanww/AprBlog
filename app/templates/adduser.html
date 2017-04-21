@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block content_title %}创建用户{% endblock %}
+
+{% block content %}
+  <form action="{{ url_for('add_user') }}" class="form-horizontal" method="post">
+    <input name=_csrf_token type=hidden value="{{ csrf_token() }}">
+    <div class="form-group">
+      <label for="email" class="col-sm-2 control-label">电子邮件：</label>
+      <div class="col-sm-10">
+        <input class="form-control" id="email" name="email" type="text" maxlength="50" value="{{ request.form.get('email', '') }}">
+      </div>
+    </div>
+    <div class="form-group">
+      <label for="password" class="col-sm-2 control-label">密码：</label>
+      <div class="col-sm-10">
+        <input class="form-control" id="password" name="password" type="text" maxlength="50" value="{{ request.form.get('password', '') }}">
+      </div>
+    </div>
+
+    <div class="form-group">
+      <div class="col-sm-offset-2 col-sm-10">
+        <button class="btn btn-primary" type="submit">注册</button>
+        <a class="btn btn-default" href="{{ url_for('index') }}">取消</a>
+      </div>
+    </div>
+  </form>
+{% endblock %}
