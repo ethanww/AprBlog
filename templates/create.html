@@ -18,16 +18,6 @@
       </div>
     </div>
     <div class="form-group">
-      <label for="category" class="col-sm-2 control-label">博文分类</label>
-      <div class="col-sm-2">
-        <select class="form-control" id="category" name="category">
-          {% for category in categories %}
-          <option value={{ category.id }}>{{ category.name }}</option> 
-          {% endfor %}
-          </select>
-      </div>
-    </div>
-    <div class="form-group">
       <div class="col-sm-offset-2 col-sm-10">
         <div class="checkbox">
           <label>

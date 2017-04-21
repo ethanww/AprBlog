@@ -9,6 +9,6 @@
 {% endblock %}
 
 {% block content %}
-  <p>Created {{ moment(post.timestamp).format('LLL') }}&nbsp;&nbsp;&nbsp;&nbsp;<a href="{{ url_for('posts',category_id=post.category.id) }}"><span class="label label-info">{{ post.category.name }}</span></a></p>
+  <p>Created {{ moment(post.timestamp).format('LLL') }}</p>
   {{ post.html_content }}
 {% endblock %}
