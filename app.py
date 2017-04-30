@@ -1,3 +1,6 @@
+#!/usr/bin/env python
+#-*-coding:utf-8-*-
+
 from flask import Flask,render_template,url_for,session,redirect,request,flash,abort,Markup
 from werkzeug.security import check_password_hash
 from flask_moment import Moment
@@ -36,11 +39,11 @@ oembed_providers = bootstrap_basic(OEmbedCache())
 '''错误界面'''
 @app.errorhandler(404)
 def page_not_found(e):
-    return render_template('404.html'),404
+    return render_template('404.html'), 404
 
 @app.errorhandler(500)
 def internal_server_error(e):
-    return render_template('500.html'),500
+    return render_template('500.html'), 500
 
 '''登录验证'''
 def login_required(fn):
@@ -55,16 +58,19 @@ def login_required(fn):
 @app.route('/login',methods=['POST','GET'])
 def login():
     next_url=request.args.get('next') or request.form.get('next')
-    pass_hash='pbkdf2:sha1:1000$80Oc5MyH$74a5c46815e27f6282b744c6590b012cf9f23b56'
-    if request.method=='POST' and request.form.get('password'):
-        if check_password_hash(pass_hash,request.form.get('password')):
-            session['logged_in']=True
-            session.permanent=True #保持session
-            flash('成功登录!','success')
-            print(request.path)
-            return redirect(next_url or url_for('index'))
-        flash('密码错误，请重新输入','danger')
-    return render_template('login.html',next=next_url)
+    if request.method=='POST' and request.form.get('password') and request.form.get('email'):
+        try:
+            user=User.objects(email=request.form.get('email')).first()
+            if user.password == request.form.get('password'):
+                session['logged_in'] = True
+                session.permanent = True
+                flash('成功登录!', 'success')
+                return redirect(next_url or url_for('index'))
+            flash('密码错误，请重新输入', 'danger')
+        except:
+            flash('不存在该用户名！','danger')
+
+    return render_template('login.html', next=next_url)
 
 '''登出视图函数'''
 @app.route('/logout',methods=['GET','POST'])
@@ -83,8 +89,10 @@ def index():
     page=request.args.get('page',1,type=int)
     pagination=Post.objects(published=True).order_by('-timestamp').paginate(page=page,per_page=10)
     posts=pagination.items
-    return render_template('index.html',posts=posts,pagination=pagination,is_draft=False)
-
+    return render_template('index.html', posts=posts, pagination=pagination, is_draft=False)
+# @app.route('/')
+# def index():
+#     return 'hello'
 
 '''草稿箱视图函数'''
 @app.route('/draft')
@@ -93,7 +101,7 @@ def draft():
     page=request.args.get('page',1,type=int)
     pagination=Post.objects(published=False).order_by('-timestamp').paginate(page=page,per_page=10)
     posts=pagination.items
-    return render_template('index.html',posts=posts,pagination=pagination,is_draft=True)
+    return render_template('index.html', posts=posts, pagination=pagination, is_draft=True)
 
 '''博文创建视图'''
 @app.route('/create',methods=['GET','POST'])
@@ -115,6 +123,26 @@ def create():
                 return redirect(url_for('draft'))
     return render_template('create.html')
 
+'''创建使用者视图'''
+@app.route('/adduser',methods=['GET','POST'])
+def add_user():
+    if request.method=='POST':
+        if request.form.get('email') and request.form.get('password'):
+            user_find = User.objects(email=request.form.get('email')).first()
+            if user_find is None:
+                user=User(email=request.form.get('email'),password=request.form.get('password'))
+                try:
+                    user.save()
+                except:
+                    flash('出了点小问题，请再输入一遍.','danger')
+                    return render_template('adduser.html')
+                flash('创建成功！','success')
+            else:
+                flash('该用户已存在.', 'danger')
+    return render_template('adduser.html')
+
+
+
 '''博文详细内容视图'''
 @app.route('/detail')
 def detail():
@@ -123,7 +151,7 @@ def detail():
     post=Post.objects(id=request.args.get('post_id')).first()
     if not post:
         abort(404)
-    return render_template('detail.html',post=post)
+    return render_template('detail.html', post=post)
 
 '''博文编辑'''
 @app.route('/edit',methods=['GET','POST'])
@@ -147,7 +175,8 @@ def edit():
             return redirect(url_for('detail',post_id=post.id))
         except:
             flash('博文更新失败.','danger')
-    return render_template('edit.html',post=post)
+    return render_template('edit.html', post=post)
+
 
 '''限制游客访问后台'''
 @app.before_request
@@ -177,6 +206,17 @@ def generate_csrf_token():
     return session['_csrf_token']
 app.jinja_env.globals['csrf_token']=generate_csrf_token
 
+'''创作者模型'''
+class User(db.Document):
+    email=db.StringField(required=True)
+    password=db.StringField(required=True,max_length=30)
+    meta={
+        'allow_inheritance': True,
+    }
+
+    def __unicode__(self):
+        return self.email
+
 
 '''数据库模型，采用MongoDB'''
 class Post(db.Document):
@@ -184,6 +224,7 @@ class Post(db.Document):
     content=db.StringField()
     timestamp=db.DateTimeField(default=datetime.utcnow)
     published=db.BooleanField(default=False)
+    author=db.ReferenceField(User)
     # category_id=db.
     # category=db.ReferenceField('Category')
     # category=db.ListField(db.ReferenceField('Category'))
@@ -209,6 +250,7 @@ class Post(db.Document):
 
     def __unicode__(self):
         return self.title
+
 
 
 '''后台管理'''

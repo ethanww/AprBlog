@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 #-*-coding:utf-8-*-
 
-from app import app,db,Post
-from flask_script import Manager,Server,Shell
+from flask_script import Manager, Server, Shell
+
+from app import app, db, Post
 
 manage=Manager(app)
 def make_shell_context():
