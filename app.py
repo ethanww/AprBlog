@@ -7,6 +7,7 @@ from flask_moment import Moment
 from flask_mongoengine import MongoEngine
 from flask_admin import Admin
 from flask_admin.contrib.mongoengine import ModelView
+from flask_admin.base import MenuLink
 from flask_wtf import Form
 import os
 import hashlib
@@ -262,8 +263,8 @@ class PostAdmin(ModelView):
 
 
 admin.add_view(PostAdmin(Post))
-
+admin.add_link(MenuLink(name='回到首页',url='/'))
 
 if __name__ == '__main__':
-    app.run(host='127.0.0.1',port=5000)
+    app.run(host='127.0.0.1',port=5050)
 
